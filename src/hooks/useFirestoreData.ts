@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
+import type { DocumentData } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
 //Interface for the data
@@ -8,14 +9,14 @@ export interface StationData {
   codigo: string;
   fuente: string;
   icono: number;
-  id: number;
+  id: string; // Changed from number to string because Firestore IDs are strings
   latitud: string;
   longitud: string;
   municipio: number;
   nivel_subsiguiente: number;
   territorial: number;
   tipo: number;
-  activo: true;
+  activo: boolean; // Changed from true to boolean
   tipo_nombre: string;
   ubicacion: string;
   umbral: number;
@@ -24,28 +25,48 @@ export interface StationData {
 }
 
 export const useFirestoreData = () => {
-    const [data, setData] = useState<StationData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    
-    useEffect(() => {
-        const fetchData = async () => {
-        try {
-            const querySnapshot = await getDocs(collection(db, "estaciones"));
-            const stations: StationData[] = [];
-            querySnapshot.forEach((doc) => {
-            stations.push({ ...doc.data(), id: doc.id } as StationData);
-            });
-            setData(stations);
-        } catch (err) {
-            setError("Error fetching data");
-        } finally {
-            setLoading(false);
+  const [data, setData] = useState<StationData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log("Fetching Firestore data...");
+        const estacionesRef = collection(db, "estaciones");
+        const querySnapshot = await getDocs(estacionesRef);
+
+        if (querySnapshot.empty) {
+          console.log("No documents found in 'estaciones' collection");
+          setData([]);
+          return;
         }
-        };
-    
-        fetchData();
-    }, []);
-    
-    return { data, loading, error };
-    }
+
+        const stations: StationData[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data() as DocumentData;
+          console.log("Document data:", data);
+          stations.push({
+            ...data,
+            id: doc.id,
+          } as StationData);
+        });
+
+        setData(stations);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(
+          `Error fetching data: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  return { data, loading, error };
+};

@@ -2,6 +2,13 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Permitir lectura pública a la colección 'estaciones'
+    match /estaciones/{document=**} {
+      allow read: if true;  // Cualquiera puede leer las estaciones
+      allow write: if false; // Solo el administrador puede escribir
+    }
+    
+    // Regla por defecto para el resto de colecciones
     match /{document=**} {
       allow read, write: if false;
     }
